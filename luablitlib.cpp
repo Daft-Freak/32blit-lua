@@ -69,6 +69,32 @@ static int rectangle(lua_State *L) {
     return 0;
 }
 
+static int text(lua_State *L) {
+    size_t len;
+    auto ptr = luaL_checklstring(L, 1, &len);
+    auto message = std::string_view(ptr, len);
+
+    // TODO: font
+
+    // TODO: helper
+    auto point = reinterpret_cast<Point *>(luaL_testudata(L, 3, LUA_BLIT_POINT));
+
+    if(point) {
+        screen.text(message, minimal_font, *point);
+        return 0;
+    }
+
+    auto rect = reinterpret_cast<Point *>(luaL_testudata(L, 3, LUA_BLIT_RECT));
+
+    if(rect) {
+        screen.text(message, minimal_font, *rect);
+        return 0;
+    }
+
+    // error?
+
+    return 0;
+}
 
 static int watermark(lua_State *L) {
     screen.watermark();
@@ -125,6 +151,7 @@ static const luaL_Reg funcs[] = {
     {"line", line},
     {"rectangle", rectangle},
     {"clear", clear},
+    {"text", text},
     {"watermark", watermark},
     {"now", now},
     {"debug", debug},
