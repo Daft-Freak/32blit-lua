@@ -173,37 +173,44 @@ function render_tile(tile, x, y, args)
   local round_br = (feature_map & (TILE_BELOW_RIGHT | TILE_BELOW | TILE_RIGHT)) == 0
 
   local color_base = blit.hsv_to_rgba(((120 - tile_y) + 110.0) / 120.0, 0.5, 0.8)
+  blit.pen(color_base)
 
   if tile & TILE_SOLID ~= 0 then
     -- Draw tiles without anti-aliasing to save code bloat
     -- Uses the rounded corner flags to miss a pixel for a
     -- basic rounded corner effect.
-    for py = 0, TILE_H - 1 do
-      for px = 0, TILE_W - 1 do
-        -- Skip drawing the pixels for each rounded corner
-        
-        local skip = false
-        if round_tl and px == 0 and py == 0 then skip = true end
-        if round_tr and px == TILE_W - 1 and py == 0 then skip = true end
-        if round_bl and px == 0 and py == TILE_H - 1 then skip = true end
-        if round_br and px == TILE_H - 1 and py == TILE_H - 1 then skip = true end
 
-        if not skip then
-          blit.pen(color_base)
-          blit.pixel(Point(tile_x + px, tile_y + py))
-        end
-      end
+    if not round_tl and not round_tr and not round_bl and not round_br then
+      -- it's a solid rectangle
+      blit.rectangle(Rect(tile_x, tile_y, TILE_W, TILE_H))
+    else
+      -- top row
+      local start_x = 0
+      local end_x = TILE_W
+      if round_tl then start_x = 1 end
+      if round_tr then end_x = end_x - 1 end
+
+      blit.rectangle(Rect(tile_x + start_x, tile_y, end_x - start_x, 1)) -- h_span?
+
+      -- bottom row
+      start_x = 0
+      end_x = TILE_W
+      if round_bl then start_x = 1 end
+      if round_br then end_x = end_x - 1 end
+
+      blit.rectangle(Rect(tile_x + start_x, tile_y + TILE_H - 1, end_x - start_x, 1))
+
+      -- rest of the tile
+      blit.rectangle(Rect(tile_x, tile_y + 1, TILE_W, TILE_H - 2))
     end
   else
     if feature_map & TILE_ABOVE ~= 0 then
       -- Draw the top left/right rounded inside corners
       -- for an empty tile.
       if feature_map & TILE_LEFT ~= 0 then
-        blit.pen(color_base)
         blit.pixel(Point(tile_x, tile_y))
       end
       if feature_map & TILE_RIGHT ~= 0 then
-        blit.pen(color_base)
         blit.pixel(Point(tile_x + TILE_W - 1, tile_y))
       end
     end
@@ -214,16 +221,14 @@ function render_tile(tile, x, y, args)
       if feature_map & TILE_LEFT ~= 0 and feature_map & TILE_RIGHT ~= 0 then
         blit.pen(Pen(200, 200, 255, 128))
         blit.rectangle(Rect(tile_x, tile_y + (TILE_H / 2), TILE_W, TILE_H / 2))
-        --blit.pen(color_base)
+        blit.pen(color_base)
       end
       -- Draw the bottom left/right rounded inside corners
       -- for an empty tile.
       if feature_map & TILE_LEFT ~= 0 then
-        blit.pen(color_base)
         blit.pixel(Point(tile_x, tile_y + TILE_H - 1))
       end
       if feature_map & TILE_RIGHT ~= 0 then
-        blit.pen(color_base)
         blit.pixel(Point(tile_x + TILE_W - 1, tile_y + TILE_H - 1))
       end
     end
