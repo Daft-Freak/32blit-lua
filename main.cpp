@@ -64,11 +64,17 @@ void render(uint32_t time) {
     uint32_t ms_end = now();
 
     // draw FPS meter
-    screen.mask = nullptr;
-    screen.pen = Pen(255, 0, 0);
-    for (unsigned int i = 0; i < (ms_end - ms_start); i++) {
+    screen.alpha = 255;
+    screen.pen = Pen(255, 255, 255, 100);
+    screen.rectangle(Rect(1, 120 - 10, 12, 9));
+    screen.pen = Pen(255, 255, 255, 200);
+    std::string fms = std::to_string(ms_end - ms_start);
+    screen.text(fms, minimal_font, Rect(3, 120 - 9, 10, 16));
+
+    const int block_size = 3;
+    for (uint32_t i = 0; i < (ms_end - ms_start); i++) {
         screen.pen = Pen(i * 5, 255 - (i * 5), 0);
-        screen.rectangle(Rect(i * 6 + 2, screen.bounds.h - 6, 4, 4));
+        screen.rectangle(Rect(i * (block_size + 1) + 1 + 13, screen.bounds.h - block_size - 1, block_size, block_size));
     }
 }
 
