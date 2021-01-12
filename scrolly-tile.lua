@@ -165,6 +165,10 @@ function render_tile(tile, x, y, args)
   local tile_x = (x * TILE_W) + offset.x
   local tile_y = (y * TILE_H) + offset.y
 
+  if tile_y <= -TILE_H or tile_y >= SCREEN_H then
+    return tile
+  end
+
   local feature_map = get_adjacent_tile_solid_flags(x, y)
 
   local round_tl = (feature_map & (TILE_ABOVE_LEFT | TILE_ABOVE | TILE_LEFT)) == 0
