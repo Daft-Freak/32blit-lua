@@ -154,91 +154,97 @@ function get_adjacent_tile_solid_flags(x, y)
   return feature_map
 end
 
-function render_tile(tile, x, y, args)
+function render_tiles(offset)
   -- Rendering tiles is pretty simple and involves drawing rectangles
   -- in the right places.
   -- But a large amount of this function is given over to rounding
   -- corners depending upon the content of neighbouring tiles.
   -- This could probably be rewritten to use a lookup table?
-  local offset = args
+  local index = 0
+  for y = 0, TILES_Y - 1 do
+    local tile_y = (y * TILE_H) + offset.y
+    -- skip offscreen rows
+    if tile_y > -TILE_H and tile_y < SCREEN_H then
+      local color_base = blit.hsv_to_rgba(((120 - tile_y) + 110.0) / 120.0, 0.5, 0.8)
+      blit.pen(color_base)
 
-  local tile_x = (x * TILE_W) + offset.x
-  local tile_y = (y * TILE_H) + offset.y
+      for x = 0, TILES_X - 1 do
+        local tile_x = (x * TILE_W) + offset.x
 
-  if tile_y <= -TILE_H or tile_y >= SCREEN_H then
-    return tile
-  end
+        local tile = tiles[index]
 
-  local feature_map = get_adjacent_tile_solid_flags(x, y)
+        local feature_map = get_adjacent_tile_solid_flags(x, y)
 
-  local round_tl = (feature_map & (TILE_ABOVE_LEFT | TILE_ABOVE | TILE_LEFT)) == 0
-  local round_tr = (feature_map & (TILE_ABOVE_RIGHT | TILE_ABOVE | TILE_RIGHT)) == 0
-  local round_bl = (feature_map & (TILE_BELOW_LEFT | TILE_BELOW | TILE_LEFT)) == 0
-  local round_br = (feature_map & (TILE_BELOW_RIGHT | TILE_BELOW | TILE_RIGHT)) == 0
+        if tile & TILE_SOLID ~= 0 then
+          -- Draw tiles without anti-aliasing to save code bloat
+          -- Uses the rounded corner flags to miss a pixel for a
+          -- basic rounded corner effect.
 
-  local color_base = blit.hsv_to_rgba(((120 - tile_y) + 110.0) / 120.0, 0.5, 0.8)
-  blit.pen(color_base)
+          local round_tl = (feature_map & (TILE_ABOVE_LEFT | TILE_ABOVE | TILE_LEFT)) == 0
+          local round_tr = (feature_map & (TILE_ABOVE_RIGHT | TILE_ABOVE | TILE_RIGHT)) == 0
+          local round_bl = (feature_map & (TILE_BELOW_LEFT | TILE_BELOW | TILE_LEFT)) == 0
+          local round_br = (feature_map & (TILE_BELOW_RIGHT | TILE_BELOW | TILE_RIGHT)) == 0
 
-  if tile & TILE_SOLID ~= 0 then
-    -- Draw tiles without anti-aliasing to save code bloat
-    -- Uses the rounded corner flags to miss a pixel for a
-    -- basic rounded corner effect.
+          if not round_tl and not round_tr and not round_bl and not round_br then
+            -- it's a solid rectangle
+            blit.rectangle(Rect(tile_x, tile_y, TILE_W, TILE_H))
+          else
+            -- top row
+            local start_x = 0
+            local end_x = TILE_W
+            if round_tl then start_x = 1 end
+            if round_tr then end_x = end_x - 1 end
 
-    if not round_tl and not round_tr and not round_bl and not round_br then
-      -- it's a solid rectangle
-      blit.rectangle(Rect(tile_x, tile_y, TILE_W, TILE_H))
+            blit.rectangle(Rect(tile_x + start_x, tile_y, end_x - start_x, 1)) -- h_span?
+
+            -- bottom row
+            start_x = 0
+            end_x = TILE_W
+            if round_bl then start_x = 1 end
+            if round_br then end_x = end_x - 1 end
+
+            blit.rectangle(Rect(tile_x + start_x, tile_y + TILE_H - 1, end_x - start_x, 1))
+
+            -- rest of the tile
+            blit.rectangle(Rect(tile_x, tile_y + 1, TILE_W, TILE_H - 2))
+          end
+        else
+          if feature_map & TILE_ABOVE ~= 0 then
+            -- Draw the top left/right rounded inside corners
+            -- for an empty tile.
+            if feature_map & TILE_LEFT ~= 0 then
+              blit.pixel(Point(tile_x, tile_y))
+            end
+            if feature_map & TILE_RIGHT ~= 0 then
+              blit.pixel(Point(tile_x + TILE_W - 1, tile_y))
+            end
+          end
+          if feature_map & TILE_BELOW ~= 0 then
+            -- If we have a tile directly to the left and right
+            -- of this one then it's a little pocket we can fill with water!
+            -- TODO: Make this not look rubbish
+            if feature_map & TILE_LEFT ~= 0 and feature_map & TILE_RIGHT ~= 0 then
+              blit.pen(Pen(200, 200, 255, 128))
+              blit.rectangle(Rect(tile_x, tile_y + (TILE_H / 2), TILE_W, TILE_H / 2))
+              blit.pen(color_base)
+            end
+            -- Draw the bottom left/right rounded inside corners
+            -- for an empty tile.
+            if feature_map & TILE_LEFT ~= 0 then
+              blit.pixel(Point(tile_x, tile_y + TILE_H - 1))
+            end
+            if feature_map & TILE_RIGHT ~= 0 then
+              blit.pixel(Point(tile_x + TILE_W - 1, tile_y + TILE_H - 1))
+            end
+          end
+        end
+
+        index = index + 1
+      end
     else
-      -- top row
-      local start_x = 0
-      local end_x = TILE_W
-      if round_tl then start_x = 1 end
-      if round_tr then end_x = end_x - 1 end
-
-      blit.rectangle(Rect(tile_x + start_x, tile_y, end_x - start_x, 1)) -- h_span?
-
-      -- bottom row
-      start_x = 0
-      end_x = TILE_W
-      if round_bl then start_x = 1 end
-      if round_br then end_x = end_x - 1 end
-
-      blit.rectangle(Rect(tile_x + start_x, tile_y + TILE_H - 1, end_x - start_x, 1))
-
-      -- rest of the tile
-      blit.rectangle(Rect(tile_x, tile_y + 1, TILE_W, TILE_H - 2))
-    end
-  else
-    if feature_map & TILE_ABOVE ~= 0 then
-      -- Draw the top left/right rounded inside corners
-      -- for an empty tile.
-      if feature_map & TILE_LEFT ~= 0 then
-        blit.pixel(Point(tile_x, tile_y))
-      end
-      if feature_map & TILE_RIGHT ~= 0 then
-        blit.pixel(Point(tile_x + TILE_W - 1, tile_y))
-      end
-    end
-    if feature_map & TILE_BELOW ~= 0 then
-      -- If we have a tile directly to the left and right
-      -- of this one then it's a little pocket we can fill with water!
-      -- TODO: Make this not look rubbish
-      if feature_map & TILE_LEFT ~= 0 and feature_map & TILE_RIGHT ~= 0 then
-        blit.pen(Pen(200, 200, 255, 128))
-        blit.rectangle(Rect(tile_x, tile_y + (TILE_H / 2), TILE_W, TILE_H / 2))
-        blit.pen(color_base)
-      end
-      -- Draw the bottom left/right rounded inside corners
-      -- for an empty tile.
-      if feature_map & TILE_LEFT ~= 0 then
-        blit.pixel(Point(tile_x, tile_y + TILE_H - 1))
-      end
-      if feature_map & TILE_RIGHT ~= 0 then
-        blit.pixel(Point(tile_x + TILE_W - 1, tile_y + TILE_H - 1))
-      end
+      index = index + TILES_X
     end
   end
-
-  return tile
 end
 
 function generate_new_row_mask()
@@ -428,7 +434,7 @@ function render(time_ms)
   local text = "RAINBOW ASCENT"
 
   if game_state == enum_state.menu then
-    for_each_tile(render_tile, tile_offset)
+    render_tiles(tile_offset)
 
     -- Draw the player
     blit.pen(Pen(255, 255, 255))
