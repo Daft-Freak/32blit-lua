@@ -142,15 +142,15 @@ function get_adjacent_tile_solid_flags(x, y)
   -- TODO: avoid calls to get_tile_at and use offsets to find
   -- adjacent tiles more efficiently.
   local feature_map = 0
-  if get_tile_at(x - 1, y) & TILE_SOLID ~= 0 then feature_map = feature_map | TILE_LEFT end
-  if get_tile_at(x + 1, y) & TILE_SOLID ~= 0 then feature_map = feature_map | TILE_RIGHT end
-  if get_tile_at(x, y - 1) & TILE_SOLID ~= 0 then feature_map = feature_map | TILE_ABOVE end
-  if get_tile_at(x, y + 1) & TILE_SOLID ~= 0 then feature_map = feature_map | TILE_BELOW end
+  if x == 0           or tiles[(x - 1) + y * TILES_X] & TILE_SOLID ~= 0 then feature_map = feature_map | TILE_LEFT end
+  if x == TILES_X - 1 or tiles[(x + 1) + y * TILES_X] & TILE_SOLID ~= 0 then feature_map = feature_map | TILE_RIGHT end
+  if y == 0           or tiles[x + (y - 1) * TILES_X] & TILE_SOLID ~= 0 then feature_map = feature_map | TILE_ABOVE end
+  if y == TILES_Y - 1 or tiles[x + (y + 1) * TILES_X] & TILE_SOLID ~= 0 then feature_map = feature_map | TILE_BELOW end
 
-  if get_tile_at(x - 1, y - 1) & TILE_SOLID ~= 0 then feature_map = feature_map | TILE_ABOVE_LEFT end
-  if get_tile_at(x + 1, y - 1) & TILE_SOLID ~= 0 then feature_map = feature_map | TILE_ABOVE_RIGHT end
-  if get_tile_at(x - 1, y + 1) & TILE_SOLID ~= 0 then feature_map = feature_map | TILE_BELOW_LEFT end
-  if get_tile_at(x + 1, y + 1) & TILE_SOLID ~= 0 then feature_map = feature_map | TILE_BELOW_RIGHT end
+  if x == 0           or y == 0           or tiles[(x - 1) + (y - 1) * TILES_X] & TILE_SOLID ~= 0 then feature_map = feature_map | TILE_ABOVE_LEFT end
+  if x == TILES_X - 1 or y == 0           or tiles[(x + 1) + (y - 1) * TILES_X] & TILE_SOLID ~= 0 then feature_map = feature_map | TILE_ABOVE_RIGHT end
+  if x == 0           or y == TILES_Y - 1 or tiles[(x - 1) + (y + 1) * TILES_X] & TILE_SOLID ~= 0 then feature_map = feature_map | TILE_BELOW_LEFT end
+  if x == TILES_X - 1 or y == TILES_Y - 1 or tiles[(x + 1) + (y + 1) * TILES_X] & TILE_SOLID ~= 0 then feature_map = feature_map | TILE_BELOW_RIGHT end
   return feature_map
 end
 
