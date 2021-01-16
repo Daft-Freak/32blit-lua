@@ -706,19 +706,18 @@ function render(time_ms)
   local color_water = blit.hsv_to_rgba(((120 - 120) + 110.0) / 120.0, 1.0, 0.5)
   color_water.a = 255
 
+  local wave_offset = math.floor(math.sin(time_ms / 500.0) * 5.0)
+
   if water_level > 0 then
     blit.pen(color_water)
     blit.rectangle(Rect(0, SCREEN_H - water_level, SCREEN_W, water_level + 1))
 
-    for x = 0, SCREEN_W - 1 do
-      local offset = x + math.floor(math.sin(time_ms / 500.0) * 5.0)
-      if (offset % 5) > 0 then
-        blit.pixel(Point(x, SCREEN_H - water_level - 1))
+    for x = -4, SCREEN_W - 1 do
+      local offset = (x + wave_offset) % 5
+      if offset == 1 then
+        blit.line(Point(x, SCREEN_H - water_level - 1), Point(x + 3, SCREEN_H - water_level - 1))
       end
-      if ((offset + 2) % 5) == 0 then
-        blit.pixel(Point(x, SCREEN_H - water_level - 2))
-      end
-      if ((offset + 3) % 5) == 0 then
+      if offset == 3 or offset == 2 then
         blit.pixel(Point(x, SCREEN_H - water_level - 2))
       end
     end
@@ -744,15 +743,12 @@ function render(time_ms)
     blit.pen(color_water)
     blit.rectangle(Rect(0, SCREEN_H - water_level, SCREEN_W, water_level + 1))
 
-    for x = 0, SCREEN_W - 1 do
-      local offset = x + math.floor(math.sin(time_ms / 500.0) * 5.0)
-      if (offset % 5) > 0 then
-        blit.pixel(Point(x, SCREEN_H - water_level - 1))
+    for x = -4, SCREEN_W - 1 do
+      local offset = (x + wave_offset) % 5
+      if offset == 1 then
+        blit.line(Point(x, SCREEN_H - water_level - 1), Point(x + 3, SCREEN_H - water_level - 1))
       end
-      if ((offset + 2) % 5) == 0 then
-        blit.pixel(Point(x, SCREEN_H - water_level - 2))
-      end
-      if ((offset + 3) % 5) == 0 then
+      if offset == 3 or offset == 2 then
         blit.pixel(Point(x, SCREEN_H - water_level - 2))
       end
     end
