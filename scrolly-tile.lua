@@ -195,7 +195,7 @@ function render_tiles(offset)
             if round_tl then start_x = 1 end
             if round_tr then end_x = end_x - 1 end
 
-            blit.rectangle(Rect(tile_x + start_x, tile_y, end_x - start_x, 1)) -- h_span?
+            blit.h_span(Point(tile_x + start_x, tile_y), end_x - start_x)
 
             -- bottom row
             start_x = 0
@@ -203,7 +203,7 @@ function render_tiles(offset)
             if round_bl then start_x = 1 end
             if round_br then end_x = end_x - 1 end
 
-            blit.rectangle(Rect(tile_x + start_x, tile_y + TILE_H - 1, end_x - start_x, 1))
+            blit.h_span(Point(tile_x + start_x, tile_y + TILE_H - 1), end_x - start_x)
 
             -- rest of the tile
             blit.rectangle(Rect(tile_x, tile_y + 1, TILE_W, TILE_H - 2))
@@ -724,10 +724,10 @@ function render(time_ms)
     for x = -4, SCREEN_W - 1 do
       local offset = (x + wave_offset) % 5
       if offset == 1 then
-        blit.line(Point(x, SCREEN_H - water_level - 1), Point(x + 3, SCREEN_H - water_level - 1))
+        blit.h_span(Point(x, SCREEN_H - water_level - 1), 4)
       end
-      if offset == 3 or offset == 2 then
-        blit.pixel(Point(x, SCREEN_H - water_level - 2))
+      if offset == 2 then
+        blit.h_span(Point(x, SCREEN_H - water_level - 2), 2)
       end
     end
   end
@@ -755,10 +755,10 @@ function render(time_ms)
     for x = -4, SCREEN_W - 1 do
       local offset = (x + wave_offset) % 5
       if offset == 1 then
-        blit.line(Point(x, SCREEN_H - water_level - 1), Point(x + 3, SCREEN_H - water_level - 1))
+        blit.h_span(Point(x, SCREEN_H - water_level - 1), 4)
       end
-      if offset == 3 or offset == 2 then
-        blit.pixel(Point(x, SCREEN_H - water_level - 2))
+      if offset == 2 then
+        blit.h_span(Point(x, SCREEN_H - water_level - 2), 2)
       end
     end
   end
