@@ -402,11 +402,231 @@ function init()
   new_level()
 end
 
---collide_player_lr
---collide_player_ud
+function collide_player_lr(tile, x, y, args)
+  offset = args
+
+  local tile_x = (x * TILE_W) + offset.x
+  local tile_y = (y * TILE_H) + offset.y
+
+  local tile_top = tile_y
+  local tile_bottom = tile_y + TILE_H
+  local tile_left = tile_x
+  local tile_right = tile_x + TILE_W
+
+  if tile & TILE_SOLID ~= 0 then
+    local near_wall_distance = 2
+    if ((player_position.y + PLAYER_H > tile_top) and (player_position.y + PLAYER_H < tile_bottom))
+    or ((player_position.y > tile_top) and player_position.y < tile_bottom) then
+        -- Collide the left-hand side of the tile right of player
+      if(player_position.x + PLAYER_W > tile_left) and (player_position.x < tile_left) then
+          -- screen.pen = Pen(255, 255, 255, 100)
+          -- screen.rectangle(rect(tile_x, tile_y, TILE_W, TILE_H))
+        player_position.x = tile_left - PLAYER_W
+        player_velocity.x = 0.0
+        player_state = enum_player_state.wall_right
+      elseif ((player_position.x + PLAYER_W + near_wall_distance) > tile_left) and (player_position.x < tile_left) then
+        player_state = enum_player_state.near_wall_right
+      end
+        -- Collide the right-hand side of the tile left of player
+      if (player_position.x < tile_right) and (player_position.x + PLAYER_W > tile_right) then
+          -- screen.pen = Pen(255, 255, 255, 100)
+          -- screen.rectangle(rect(tile_x, tile_y, TILE_W, TILE_H))
+        player_position.x = tile_right
+        player_velocity.x = 0.0
+        player_state = enum_player_state.wall_left
+      elseif ((player_position.x - near_wall_distance) < tile_right) and (player_position.x + PLAYER_W > tile_right) then
+        player_state = enum_player_state.near_wall_left
+      end
+    end
+  end
+
+  return tile
+end
+
+function collide_player_ud(tile, x, y, args)
+  offset = args
+
+  local tile_x = (x * TILE_W) + offset.x
+  local tile_y = (y * TILE_H) + offset.y
+
+  local tile_top = tile_y
+  local tile_bottom = tile_y + TILE_H
+  local tile_left = tile_x
+  local tile_right = tile_x + TILE_W
+
+  if tile & TILE_SOLID ~= 0 then
+    if (player_position.x + PLAYER_W > tile_left) and (player_position.x < tile_right) then
+      -- Collide the bottom side of the tile above player
+      if player_position.y < tile_bottom and player_position.y + PLAYER_H > tile_bottom then
+        player_position.y = tile_bottom
+        player_velocity.y = 0
+      end
+      -- Collide the top side of the tile below player
+      if(player_position.y + PLAYER_H > tile_top) and (player_position.y < tile_top) then
+        player_position.y = tile_top - PLAYER_H
+        player_velocity.y = 0
+        player_jump_count = MAX_JUMP
+        player_state = enum_player_state.ground
+      end
+    end
+  end
+
+  return tile
+end
+
+last_wall_jump = enum_player_state.ground
 
 function update(time)
+  local water_dist = player_position.y - (SCREEN_H - water_level)
+  if water_dist < 0 then
+    water_dist = 0
+  end
 
+  -- AUDIO
+
+  if game_state == enum_state.menu then
+    if pressed & B ~= 0 then
+      new_game()
+    elseif pressed & UP ~= 0 then
+      current_random_source = RANDOM_TYPE_PRNG
+      new_level()
+    elseif pressed & DOWN ~= 0 then
+      current_random_source = RANDOM_TYPE_HRNG
+      new_level()
+    elseif pressed & RIGHT ~= 0 then
+      if current_random_source == RANDOM_TYPE_PRNG then
+        current_random_seed = current_random_seed + 1
+        new_level()
+      end
+    elseif pressed & LEFT ~= 0 then
+      if current_random_source == RANDOM_TYPE_PRNG then
+        current_random_seed = current_random_seed - 1
+        new_level()
+      end
+    end
+    return
+  end
+
+  if game_state == enum_state.dead then
+    if pressed & B ~= 0 then
+      game_state = enum_state.menu
+    end
+    return
+  end
+
+  if game_state == enum_state.play then
+    -- AUDIO
+
+    movement = Vec2(0, 0)
+    water_level = water_level + 0.05
+    jump_velocity.x = 0.0
+
+    -- Apply Gravity
+    player_velocity.y = player_velocity.y + 0.098
+
+    if state & LEFT ~= 0 then
+      player_velocity.x = player_velocity.x - 0.1
+      movement.x = -1
+
+      if state & UP ~= 0 then
+        if player_state == enum_player_state.wall_left or player_state == enum_player_state.near_wall_left then
+          player_velocity.y = player_velocity.y - 0.12
+        end
+        movement.y = -1
+      end
+    end
+    if state & RIGHT ~= 0 then
+      player_velocity.x = player_velocity.x + 0.1
+      movement.x = 1
+
+      if state & UP ~= 0 then
+        if player_state == enum_player_state.wall_right or player_state == enum_player_state.near_wall_right then
+          player_velocity.y = player_velocity.y - 0.12
+        end
+        movement.y = -1
+      end
+    end
+    if state & DOWN ~= 0 then
+      movement.y = 1
+    end
+
+    if player_jump_count > 0 then
+      if pressed & A ~= 0 then
+        if player_state == enum_player_state.wall_left
+        or player_state == enum_player_state.wall_right
+        or player_state == enum_player_state.near_wall_left
+        or player_state == enum_player_state.near_wall_right then
+          wall_jump_state = (player_state == enum_player_state.wall_left or player_state == enum_player_state.near_wall_left) and enum_player_state.wall_left or enum_player_state.wall_right
+          jump_velocity.x = (wall_jump_state == enum_player_state.wall_left) and 1.2 or -1.2
+          if last_wall_jump ~= wall_jump_state then
+              player_jump_count = MAX_JUMP
+          end
+          last_wall_jump = wall_jump_state
+        end
+        --player_velocity = jump_velocity
+        player_velocity.y = jump_velocity.y
+        player_state = enum_player_state.air
+        player_jump_count = player_jump_count - 1
+
+        -- AUDIO
+      end
+    end
+    -- AUDIO
+
+    if player_state == enum_player_state.wall_left
+    or player_state == enum_player_state.wall_right
+    or player_state == enum_player_state.near_wall_left
+    or player_state == enum_player_state.near_wall_right then
+      if (state & LEFT ~= 0) and (player_state == enum_player_state.wall_left or player_state == enum_player_state.near_wall_left) then
+        player_velocity.y = player_velocity.y * 0.5
+      elseif (state & RIGHT ~= 0) and (player_state == enum_player_state.wall_right or player_state == enum_player_state.near_wall_right) then
+        player_velocity.y = player_velocity.y * 0.5
+      else
+        -- Air friction
+        player_velocity.y = player_velocity.y * 0.98
+        player_velocity.x = player_velocity.x * 0.91
+      end
+    elseif player_state == enum_player_state.air then
+      -- Air friction
+      player_velocity.y = player_velocity.y * 0.98
+      player_velocity.x = player_velocity.x * 0.91
+    elseif player_state == enum_player_state.ground then
+      -- Ground friction
+      --player_velocity = player_velocity * 0.8
+      player_velocity.x = player_velocity.x * 0.8
+      player_velocity.y = player_velocity.y * 0.8
+    end
+
+    -- Default state is in the air unless we collide
+    -- with a wall or the ground
+    player_state = enum_player_state.air
+
+    player_position.x = player_position.x + player_velocity.x
+    -- Useful for debug since you can position the player directly
+    --player_position.x += movement.x
+
+    if player_position.x <= 0 then
+      player_position.x = 0
+      player_velocity.x = 0
+      player_state = enum_player_state.wall_left
+    elseif player_position.x + PLAYER_W >= SCREEN_W then
+      player_position.x = SCREEN_W - PLAYER_W
+      player_velocity.x = 0
+      player_state = enum_player_state.wall_right
+    end
+    for_each_tile(collide_player_lr, tile_offset)
+
+    player_position.y = player_position.y + player_velocity.y
+    -- Useful for debug since you can position the player directly
+    --player_position.y += movement.y
+
+    if player_position.y + PLAYER_H > SCREEN_H then
+        game_state = enum_state.dead
+    elseif player_position.y > SCREEN_H - water_level then
+        game_state = enum_state.dead
+    end
+    for_each_tile(collide_player_ud, tile_offset)
+  end
 end
 
 function render_summary()
@@ -453,128 +673,120 @@ function render(time_ms)
 
       local char = string.sub(text, i, i)
       blit.text(char, minimal_font, Point(x, y))
-      x = x + 10;
+      x = x + 10
     end
 
     blit.pen(Pen(255, 255, 255, 150))
 
-    render_summary();
+    render_summary()
 
     return
   end
-  --[[
 
-  local color_water = hsv_to_rgba(((120 - 120) + 110.0) / 120.0, 1.0f, 0.5);
+  local color_water = blit.hsv_to_rgba(((120 - 120) + 110.0) / 120.0, 1.0, 0.5)
   color_water.a = 255
 
-  if(water_level > 0){
-      blit.pen(color_water)
-      blit.rectangle(Rect(0, SCREEN_H - water_level, SCREEN_W, water_level + 1));
+  if water_level > 0 then
+    blit.pen(color_water)
+    blit.rectangle(Rect(0, SCREEN_H - water_level, SCREEN_W, water_level + 1))
 
-      for(auto x = 0; x < SCREEN_W; x++){
-          uint16_t offset = x + uint16_t(sinf(time_ms / 500.0f) * 5.0f);
-          if((offset % 5) > 0){
-              blit.pixel(Point(x, SCREEN_H - water_level - 1));
-          }
-          if(((offset + 2) % 5) == 0){
-              blit.pixel(Point(x, SCREEN_H - water_level - 2));
-          }
-          if(((offset + 3) % 5) == 0){
-              blit.pixel(Point(x, SCREEN_H - water_level - 2));
-          }
-      }
-  }
+    for x = 0, SCREEN_W - 1 do
+      local offset = x + math.floor(math.sin(time_ms / 500.0) * 5.0)
+      if (offset % 5) > 0 then
+        blit.pixel(Point(x, SCREEN_H - water_level - 1))
+      end
+      if ((offset + 2) % 5) == 0 then
+        blit.pixel(Point(x, SCREEN_H - water_level - 2))
+      end
+      if ((offset + 3) % 5) == 0 then
+        blit.pixel(Point(x, SCREEN_H - water_level - 2))
+      end
+    end
+  end
 
-  for_each_tile(render_tile, (void *)&tile_offset);
+  render_tiles(tile_offset)
 
   -- Draw the player
   blit.pen(Pen(255, 255, 255))
-  blit.rectangle(Rect(player_position.x, player_position.y, PLAYER_W, PLAYER_H));
+  blit.rectangle(Rect(player_position.x, player_position.y, PLAYER_W, PLAYER_H))
   blit.pen(Pen(255, 50, 50))
-  blit.rectangle(Rect(player_position.x, player_position.y, PLAYER_W, 1));
+  blit.rectangle(Rect(player_position.x, player_position.y, PLAYER_W, 1))
 
   --[[
   -- Show number of active passages
-  p = std::to_string(passage_width + 1);
-  p.append(" passages");
-  blit.text(p, minimal_font, point(2, 10));
+  p = std::to_string(passage_width + 1)
+  p.append(" passages")
+  blit.text(p, minimal_font, point(2, 10))
   ]]
-  --[[
 
-  if(water_level > 0){
-      color_water.a = 100;
-      blit.pen = color_water;
-      blit.rectangle(Rect(0, SCREEN_H - water_level, SCREEN_W, water_level + 1));
+  if water_level > 0 then
+    color_water.a = 100
+    blit.pen(color_water)
+    blit.rectangle(Rect(0, SCREEN_H - water_level, SCREEN_W, water_level + 1))
 
-      for(auto x = 0; x < SCREEN_W; x++){
-          uint16_t offset = x + uint16_t(sinf(time_ms / 500.0f) * 5.0f);
-          if((offset % 5) > 0){
-              blit.pixel(Point(x, SCREEN_H - water_level - 1));
-          }
-          if(((offset + 2) % 5) == 0){
-              blit.pixel(Point(x, SCREEN_H - water_level - 2));
-          }
-          if(((offset + 3) % 5) == 0){
-              blit.pixel(Point(x, SCREEN_H - water_level - 2));
-          }
-      }
-  }
+    for x = 0, SCREEN_W - 1 do
+      local offset = x + math.floor(math.sin(time_ms / 500.0) * 5.0)
+      if (offset % 5) > 0 then
+        blit.pixel(Point(x, SCREEN_H - water_level - 1))
+      end
+      if ((offset + 2) % 5) == 0 then
+        blit.pixel(Point(x, SCREEN_H - water_level - 2))
+      end
+      if ((offset + 3) % 5) == 0 then
+        blit.pixel(Point(x, SCREEN_H - water_level - 2))
+      end
+    end
+  end
 
-  if(game_state == enum_state::dead) {
-      blit.pen(Pen(128, 0, 0, 200))
-      blit.rectangle(Rect(0, 0, SCREEN_W, SCREEN_H));
-      blit.pen(Pen(255, 0, 0, 255))
-      blit.text("YOU DIED!", minimal_font, Point((SCREEN_W / 2) - 20, (SCREEN_H / 2) - 4));
+  if game_state == enum_state.dead then
+    blit.pen(Pen(128, 0, 0, 200))
+    blit.rectangle(Rect(0, 0, SCREEN_W, SCREEN_H))
+    blit.pen(Pen(255, 0, 0, 255))
+    blit.text("YOU DIED!", minimal_font, Point((SCREEN_W / 2) - 20, (SCREEN_H / 2) - 4))
 
-      -- Round stats
-      blit.pen(Pen(255, 255, 255))
+    -- Round stats
+    blit.pen(Pen(255, 255, 255))
 
-      std::string text = "";
+    local text = "You climbed: " .. player_progress .. "cm"
 
-      text = "You climbed: ";
-      text.append(std::to_string(player_progress));
-      text.append("cm");
-      blit.text(text, minimal_font, Point(10, (SCREEN_H / 2) + 10));
+    blit.text(text, minimal_font, Point(10, (SCREEN_H / 2) + 10))
 
-      render_summary();
-  }
+    render_summary()
   else
-  {
-      -- Draw the HUD
-      blit.pen(Pen(255, 255, 255))
+    -- Draw the HUD
+    blit.pen(Pen(255, 255, 255))
 
-      text = std::to_string(player_progress);
-      text.append("cm");
-      blit.text(text, minimal_font, Point(2, 2));
+    local text = player_progress .. "cm"
+    blit.text(text, minimal_font, Point(2, 2))
 
-      --[[
-      -- State debug info
-      text = "Jumps: ";
-      text.append(std::to_string(player_jump_count));
-      blit.text(text, minimal_font, point(2, 12));
+    --[[
+    -- State debug info
+    text = "Jumps: "
+    text.append(std::to_string(player_jump_count))
+    blit.text(text, minimal_font, point(2, 12))
 
-      text = "State: ";
-      switch(player_state){
-          case enum_player_state::ground:
-              text.append("GROUND");
-              break;
-          case enum_player_state::air:
-              text.append("AIR");
-              break;
-          case enum_player_state::near_wall_left:
-              text.append("NEAR L");
-              break;
-          case enum_player_state::wall_left:
-              text.append("WALL L");
-              break;
-          case enum_player_state::near_wall_right:
-              text.append("NEAR R");
-              break;
-          case enum_player_state::wall_right:
-              text.append("WALL R");
-              break;
-      }
-      blit.text(text, minimal_font, point(2, 22));
-      ]]
-  --}
+    text = "State: "
+    switch(player_state){
+        case enum_player_state::ground:
+            text.append("GROUND")
+            break
+        case enum_player_state::air:
+            text.append("AIR")
+            break
+        case enum_player_state::near_wall_left:
+            text.append("NEAR L")
+            break
+        case enum_player_state::wall_left:
+            text.append("WALL L")
+            break
+        case enum_player_state::near_wall_right:
+            text.append("NEAR R")
+            break
+        case enum_player_state::wall_right:
+            text.append("WALL R")
+            break
+    }
+    blit.text(text, minimal_font, point(2, 22))
+    ]]
+  end
 end
