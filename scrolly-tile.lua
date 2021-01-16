@@ -593,6 +593,7 @@ function update(time)
           last_wall_jump = wall_jump_state
         end
         --player_velocity = jump_velocity
+        player_velocity.x = jump_velocity.x
         player_velocity.y = jump_velocity.y
         player_state = enum_player_state.air
         player_jump_count = player_jump_count - 1
