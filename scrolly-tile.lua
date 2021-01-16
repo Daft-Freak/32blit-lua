@@ -341,7 +341,25 @@ function update_tiles()
   end
 end
 
--- update_state
+function update_state()
+  if game_state == enum_state.menu then
+    tile_offset.y = tile_offset.y + 1
+  end
+
+  if game_state == enum_state.play and (player_position.y < 70) then
+    tile_offset.y = tile_offset.y + 1
+    if water_level > 10 then
+      water_level = water_level - 1
+    end
+    player_position.y = player_position.y + 1
+    player_progress = player_progress + 1
+  end
+
+  if tile_offset.y >= 0 then
+    tile_offset.y = -10
+    update_tiles()
+  end
+end
 
 function place_player()
   -- Try to find a suitable place to drop the player
@@ -477,6 +495,8 @@ end
 last_wall_jump = enum_player_state.ground
 
 function update(time)
+  update_state() -- this is a timer in the C++ version
+
   local water_dist = player_position.y - (SCREEN_H - water_level)
   if water_dist < 0 then
     water_dist = 0
@@ -603,7 +623,7 @@ function update(time)
 
     player_position.x = player_position.x + player_velocity.x
     -- Useful for debug since you can position the player directly
-    --player_position.x += movement.x
+    --player_position.x = player_position.x + movement.x
 
     if player_position.x <= 0 then
       player_position.x = 0
@@ -618,7 +638,7 @@ function update(time)
 
     player_position.y = player_position.y + player_velocity.y
     -- Useful for debug since you can position the player directly
-    --player_position.y += movement.y
+    --player_position.y = player_position.y + movement.y
 
     if player_position.y + PLAYER_H > SCREEN_H then
         game_state = enum_state.dead
