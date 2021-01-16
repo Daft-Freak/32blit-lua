@@ -420,76 +420,85 @@ function init()
   new_level()
 end
 
-function collide_player_lr(tile, x, y, args)
-  offset = args
+function collide_player_lr(offset)
+  -- get tiles the player is intersecting
+  local player_tile_left = math.floor((player_position.x - offset.x) / TILE_W)
+  local player_tile_top = math.floor((player_position.y - offset.y) / TILE_H)
 
-  local tile_x = (x * TILE_W) + offset.x
-  local tile_y = (y * TILE_H) + offset.y
+  local player_tile_right = math.floor((player_position.x - offset.x + PLAYER_W - 1) / TILE_W)
+  local player_tile_bottom = math.floor((player_position.y - offset.y + PLAYER_H - 1) / TILE_H)
 
-  local tile_top = tile_y
-  local tile_bottom = tile_y + TILE_H
-  local tile_left = tile_x
-  local tile_right = tile_x + TILE_W
+  for y = player_tile_top, player_tile_bottom do
+    for x = player_tile_left, player_tile_right do
+      local index = (y * TILES_X) + x
+      local tile = tiles[index]
 
-  if tile & TILE_SOLID ~= 0 then
-    local near_wall_distance = 2
-    if ((player_position.y + PLAYER_H > tile_top) and (player_position.y + PLAYER_H < tile_bottom))
-    or ((player_position.y > tile_top) and player_position.y < tile_bottom) then
-        -- Collide the left-hand side of the tile right of player
-      if(player_position.x + PLAYER_W > tile_left) and (player_position.x < tile_left) then
-          -- screen.pen = Pen(255, 255, 255, 100)
-          -- screen.rectangle(rect(tile_x, tile_y, TILE_W, TILE_H))
-        player_position.x = tile_left - PLAYER_W
-        player_velocity.x = 0.0
-        player_state = enum_player_state.wall_right
-      elseif ((player_position.x + PLAYER_W + near_wall_distance) > tile_left) and (player_position.x < tile_left) then
-        player_state = enum_player_state.near_wall_right
-      end
-        -- Collide the right-hand side of the tile left of player
-      if (player_position.x < tile_right) and (player_position.x + PLAYER_W > tile_right) then
-          -- screen.pen = Pen(255, 255, 255, 100)
-          -- screen.rectangle(rect(tile_x, tile_y, TILE_W, TILE_H))
-        player_position.x = tile_right
-        player_velocity.x = 0.0
-        player_state = enum_player_state.wall_left
-      elseif ((player_position.x - near_wall_distance) < tile_right) and (player_position.x + PLAYER_W > tile_right) then
-        player_state = enum_player_state.near_wall_left
+      local tile_x = (x * TILE_W) + offset.x
+
+      local tile_left = tile_x
+      local tile_right = tile_x + TILE_W
+
+      if tile & TILE_SOLID ~= 0 then
+        local near_wall_distance = 2
+          -- Collide the left-hand side of the tile right of player
+        if(player_position.x + PLAYER_W > tile_left) and (player_position.x < tile_left) then
+            -- screen.pen = Pen(255, 255, 255, 100)
+            -- screen.rectangle(rect(tile_x, tile_y, TILE_W, TILE_H))
+          player_position.x = tile_left - PLAYER_W
+          player_velocity.x = 0.0
+          player_state = enum_player_state.wall_right
+        elseif ((player_position.x + PLAYER_W + near_wall_distance) > tile_left) and (player_position.x < tile_left) then
+          player_state = enum_player_state.near_wall_right
+        end
+          -- Collide the right-hand side of the tile left of player
+        if (player_position.x < tile_right) and (player_position.x + PLAYER_W > tile_right) then
+            -- screen.pen = Pen(255, 255, 255, 100)
+            -- screen.rectangle(rect(tile_x, tile_y, TILE_W, TILE_H))
+          player_position.x = tile_right
+          player_velocity.x = 0.0
+          player_state = enum_player_state.wall_left
+        elseif ((player_position.x - near_wall_distance) < tile_right) and (player_position.x + PLAYER_W > tile_right) then
+          player_state = enum_player_state.near_wall_left
+        end
       end
     end
   end
-
-  return tile
 end
 
-function collide_player_ud(tile, x, y, args)
-  offset = args
+function collide_player_ud(offset)
+  -- get tiles the player is intersecting
+  local player_tile_left = math.floor((player_position.x - offset.x) / TILE_W)
+  local player_tile_top = math.floor((player_position.y - offset.y) / TILE_H)
 
-  local tile_x = (x * TILE_W) + offset.x
-  local tile_y = (y * TILE_H) + offset.y
+  local player_tile_right = math.floor((player_position.x - offset.x + PLAYER_W - 1) / TILE_W)
+  local player_tile_bottom = math.floor((player_position.y - offset.y + PLAYER_H - 1) / TILE_H)
 
-  local tile_top = tile_y
-  local tile_bottom = tile_y + TILE_H
-  local tile_left = tile_x
-  local tile_right = tile_x + TILE_W
+  for y = player_tile_top, player_tile_bottom + 1 do
+    for x = player_tile_left, player_tile_right do
+      local index = (y * TILES_X) + x
+      local tile = tiles[index]
 
-  if tile & TILE_SOLID ~= 0 then
-    if (player_position.x + PLAYER_W > tile_left) and (player_position.x < tile_right) then
-      -- Collide the bottom side of the tile above player
-      if player_position.y < tile_bottom and player_position.y + PLAYER_H > tile_bottom then
-        player_position.y = tile_bottom
-        player_velocity.y = 0
-      end
-      -- Collide the top side of the tile below player
-      if(player_position.y + PLAYER_H > tile_top) and (player_position.y < tile_top) then
-        player_position.y = tile_top - PLAYER_H
-        player_velocity.y = 0
-        player_jump_count = MAX_JUMP
-        player_state = enum_player_state.ground
+      local tile_y = (y * TILE_H) + offset.y
+
+      local tile_top = tile_y
+      local tile_bottom = tile_y + TILE_H
+
+      if tile & TILE_SOLID ~= 0 then
+        -- Collide the bottom side of the tile above player
+        if player_position.y < tile_bottom and player_position.y + PLAYER_H > tile_bottom then
+          player_position.y = tile_bottom
+          player_velocity.y = 0
+        end
+        -- Collide the top side of the tile below player
+        if(player_position.y + PLAYER_H > tile_top) and (player_position.y < tile_top) then
+          player_position.y = tile_top - PLAYER_H
+          player_velocity.y = 0
+          player_jump_count = MAX_JUMP
+          player_state = enum_player_state.ground
+        end
       end
     end
   end
-
-  return tile
 end
 
 last_wall_jump = enum_player_state.ground
@@ -634,7 +643,7 @@ function update(time)
       player_velocity.x = 0
       player_state = enum_player_state.wall_right
     end
-    for_each_tile(collide_player_lr, tile_offset)
+    collide_player_lr(tile_offset)
 
     player_position.y = player_position.y + player_velocity.y
     -- Useful for debug since you can position the player directly
@@ -645,7 +654,7 @@ function update(time)
     elseif player_position.y > SCREEN_H - water_level then
         game_state = enum_state.dead
     end
-    for_each_tile(collide_player_ud, tile_offset)
+    collide_player_ud(tile_offset)
   end
 end
 
